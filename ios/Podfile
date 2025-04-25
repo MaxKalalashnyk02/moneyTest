@@ -5,22 +5,35 @@ require Pod::Executable.execute_command('node', ['-p',
     {paths: [process.argv[1]]},
   )', __dir__]).strip
 
-platform :ios, min_ios_version_supported
+platform :ios, '16.0'
 prepare_react_native_project!
 
-linkage = ENV['USE_FRAMEWORKS']
-if linkage != nil
-  Pod::UI.puts "Configuring Pod with #{linkage}ally linked Frameworks".green
-  use_frameworks! :linkage => linkage.to_sym
-end
+# Fix Swift module integration issues
+# use_modular_headers!
+
+# Remove static linking to simplify build
+# Uncomment to define a global platform for your project
+# Force the static linking
+# use_frameworks! :linkage => :static
 
 target 'MoneyManager' do
   config = use_native_modules!
 
+  # Explicitly set Firebase pods with modular headers
+  # pod 'Firebase', :modular_headers => true
+  # pod 'FirebaseCore', :modular_headers => true
+  # pod 'FirebaseCoreInternal', :modular_headers => true
+  # pod 'FirebaseAuth', :modular_headers => true
+  # pod 'GoogleUtilities', :modular_headers => true
+  # pod 'FirebaseAppCheckInterop', :modular_headers => true
+  # pod 'FirebaseCoreExtension', :modular_headers => true
+  # pod 'RecaptchaInterop', :modular_headers => true
+
   use_react_native!(
     :path => config[:reactNativePath],
     # An absolute path to your application root.
-    :app_path => "#{Pod::Config.instance.installation_root}/.."
+    :app_path => "#{Pod::Config.instance.installation_root}/..",
+    :hermes_enabled => true
   )
 
   target 'MoneyManagerTests' do
@@ -29,6 +42,26 @@ target 'MoneyManager' do
   end
 
   post_install do |installer|
+    # Firebase fix for Xcode 14+
+    installer.pods_project.targets.each do |target|
+      target.build_configurations.each do |config|
+        # Fix for capability conflicts
+        config.build_settings['EXPANDED_CODE_SIGN_IDENTITY'] = ""
+        config.build_settings['CODE_SIGNING_REQUIRED'] = "NO"
+        config.build_settings['CODE_SIGNING_ALLOWED'] = "NO"
+        # Add privacy usage description
+        config.build_settings['CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED'] = "YES"
+        # Fix Xcode 15 interactions
+        config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '16.0'
+        # Fix Swift interoperability issues
+        # config.build_settings['SWIFT_VERSION'] = '5.0'
+        # Remove capability item model conflict
+        if config.build_settings['DEVELOPMENT_TEAM'].nil?
+          config.build_settings['DEVELOPMENT_TEAM'] = ''
+        end
+      end
+    end
+    
     # https://github.com/facebook/react-native/blob/main/packages/react-native/scripts/react_native_pods.rb#L197-L202
     react_native_post_install(
       installer,
