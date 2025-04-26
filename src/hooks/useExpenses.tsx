@@ -37,11 +37,12 @@ export const useExpenses = () => {
       const data = await expenseService.getExpenses();
 
       const sortedData = sortExpensesByDate(data, currentSortOrder);
-
-      setExpenses(sortedData);
+      setExpenses(data);
       setFilteredExpenses(sortedData);
+      return sortedData;
     } catch (e: any) {
       setError(e.message || 'Failed to load expenses');
+      return [];
     } finally {
       setIsLoading(false);
     }
@@ -49,12 +50,11 @@ export const useExpenses = () => {
 
   const addExpense = async (expense: Omit<Expense, 'id'>) => {
     try {
-      setIsLoading(true);
       const newExpense = await expenseService.addExpense(expense);
 
       setExpenses(prevExpenses => {
         const updatedExpenses = [...prevExpenses, newExpense];
-        return sortExpensesByDate(updatedExpenses, currentSortOrder);
+        return updatedExpenses;
       });
 
       setFilteredExpenses(prevFiltered => {
@@ -66,8 +66,6 @@ export const useExpenses = () => {
     } catch (e: any) {
       setError(e.message || 'Failed to add expense');
       return false;
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -75,7 +73,18 @@ export const useExpenses = () => {
     try {
       setIsLoading(true);
       await expenseService.updateExpense(id, expense);
-      await loadExpenses();
+
+      if (expense.amount || expense.date || expense.category) {
+        await loadExpenses();
+      } else {
+        setExpenses(prevExpenses =>
+          prevExpenses.map(exp => (exp.id === id ? {...exp, ...expense} : exp)),
+        );
+        setFilteredExpenses(prevFiltered =>
+          prevFiltered.map(exp => (exp.id === id ? {...exp, ...expense} : exp)),
+        );
+      }
+
       return true;
     } catch (e: any) {
       setError(e.message || 'Failed to update expense');
@@ -89,7 +98,12 @@ export const useExpenses = () => {
     try {
       setIsLoading(true);
       await expenseService.deleteExpense(id);
-      await loadExpenses();
+
+      setExpenses(prevExpenses => prevExpenses.filter(exp => exp.id !== id));
+      setFilteredExpenses(prevFiltered =>
+        prevFiltered.filter(exp => exp.id !== id),
+      );
+
       return true;
     } catch (e: any) {
       setError(e.message || 'Failed to delete expense');
@@ -106,9 +120,7 @@ export const useExpenses = () => {
       categories: string[],
       sortOrder: string = 'desc',
     ) => {
-      if (sortOrder !== currentSortOrder) {
-        setCurrentSortOrder(sortOrder);
-      }
+      setCurrentSortOrder(sortOrder);
 
       let filtered = [...expenses];
 
@@ -130,10 +142,19 @@ export const useExpenses = () => {
         );
       }
 
-      const sortedFiltered = sortExpensesByDate(filtered, sortOrder);
-      setFilteredExpenses(sortedFiltered);
+      setFilteredExpenses(sortExpensesByDate(filtered, sortOrder));
     },
-    [expenses, sortExpensesByDate, currentSortOrder],
+    [expenses, sortExpensesByDate],
+  );
+
+  const changeSortOrder = useCallback(
+    (newSortOrder: string) => {
+      setCurrentSortOrder(newSortOrder);
+      setFilteredExpenses(prevFiltered =>
+        sortExpensesByDate(prevFiltered, newSortOrder),
+      );
+    },
+    [sortExpensesByDate],
   );
 
   useEffect(() => {
@@ -146,6 +167,10 @@ export const useExpenses = () => {
 
     loadExpenses();
 
+    const handleDatabaseChange = () => {
+      loadExpenses();
+    };
+
     const subscription = supabase
       .channel('public:Expense')
       .on(
@@ -155,9 +180,7 @@ export const useExpenses = () => {
           schema: 'public',
           table: 'Expense',
         },
-        () => {
-          loadExpenses();
-        },
+        handleDatabaseChange,
       )
       .on(
         'postgres_changes',
@@ -166,9 +189,7 @@ export const useExpenses = () => {
           schema: 'public',
           table: 'Expense',
         },
-        () => {
-          loadExpenses();
-        },
+        handleDatabaseChange,
       )
       .on(
         'postgres_changes',
@@ -177,9 +198,7 @@ export const useExpenses = () => {
           schema: 'public',
           table: 'Expense',
         },
-        () => {
-          loadExpenses();
-        },
+        handleDatabaseChange,
       )
       .subscribe();
 
@@ -198,6 +217,7 @@ export const useExpenses = () => {
     updateExpense,
     deleteExpense,
     filterExpenses,
+    changeSortOrder,
     currentSortOrder,
   };
 };

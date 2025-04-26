@@ -47,6 +47,7 @@ const Expense = () => {
     isLoading,
     loadExpenses,
     currentSortOrder,
+    changeSortOrder,
   } = useExpenses();
   const {accounts, loadAccounts, updateAccount} = useAccounts();
 
@@ -65,10 +66,15 @@ const Expense = () => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const [titleError, setTitleError] = useState('');
+  const [amountError, setAmountError] = useState('');
+  const [accountError, setAccountError] = useState('');
+  const [categoryError, setCategoryError] = useState('');
+
   const [filterStartDate, setFilterStartDate] = useState<Date | null>(null);
   const [filterEndDate, setFilterEndDate] = useState<Date | null>(null);
   const [filterCategories, setFilterCategories] = useState<string[]>([]);
-  const [sortOrder, setSortOrder] = useState(currentSortOrder);
+  const [sortOrder, setSortOrder] = useState<string>('desc');
 
   const [deletingExpenseIds, setDeletingExpenseIds] = useState<string[]>([]);
   const [initialRenderDone, setInitialRenderDone] = useState(false);
@@ -89,17 +95,16 @@ const Expense = () => {
       }
 
       loadAccounts();
+      loadExpenses();
 
-      loadExpenses().then(() => {
-        if (filterExpenses) {
-          filterExpenses(
-            filterStartDate,
-            filterEndDate,
-            filterCategories,
-            sortOrder,
-          );
-        }
-      });
+      if (filterStartDate || filterEndDate || filterCategories.length > 0) {
+        filterExpenses(
+          filterStartDate,
+          filterEndDate,
+          filterCategories,
+          sortOrder,
+        );
+      }
 
       return () => {};
     }, [
@@ -177,6 +182,11 @@ const Expense = () => {
       setSelectedAccount('');
       manuallyOpened.current = false;
       setIsSubmitting(false);
+
+      setTitleError('');
+      setAmountError('');
+      setAccountError('');
+      setCategoryError('');
     } else {
       manuallyOpened.current = true;
 
@@ -204,15 +214,7 @@ const Expense = () => {
   const toggleSortOrder = () => {
     const newSortOrder = sortOrder === 'desc' ? 'asc' : 'desc';
     setSortOrder(newSortOrder);
-
-    if (filterExpenses) {
-      filterExpenses(
-        filterStartDate,
-        filterEndDate,
-        filterCategories,
-        newSortOrder,
-      );
-    }
+    changeSortOrder(newSortOrder);
   };
 
   const toggleDatePicker = () => {
@@ -250,6 +252,43 @@ const Expense = () => {
     });
   };
 
+  const validateInputs = () => {
+    let isValid = true;
+
+    if (!title.trim()) {
+      setTitleError('Title is required');
+      isValid = false;
+    } else {
+      setTitleError('');
+    }
+
+    if (!amount.trim()) {
+      setAmountError('Amount is required');
+      isValid = false;
+    } else if (isNaN(parseFloat(amount)) || parseFloat(amount) <= 0) {
+      setAmountError('Please enter a valid positive number');
+      isValid = false;
+    } else {
+      setAmountError('');
+    }
+
+    if (!category.trim()) {
+      setCategoryError('Category is required');
+      isValid = false;
+    } else {
+      setCategoryError('');
+    }
+
+    if (!selectedAccount) {
+      setAccountError('Please select an account');
+      isValid = false;
+    } else {
+      setAccountError('');
+    }
+
+    return isValid;
+  };
+
   const handleEditExpense = (expense: any) => {
     manuallyOpened.current = true;
 
@@ -260,6 +299,11 @@ const Expense = () => {
     setEditingId(expense.id);
     setSelectedAccount(expense.account_id);
     setVisible(true);
+
+    setTitleError('');
+    setAmountError('');
+    setAccountError('');
+    setCategoryError('');
   };
 
   const handleAddExpense = async () => {
@@ -272,19 +316,15 @@ const Expense = () => {
       return;
     }
 
-    if (!title || !amount) {
-      Alert.alert('Error', 'Title and amount are required');
-      return;
-    }
-
-    if (!selectedAccount) {
-      Alert.alert('Error', 'Please select an account');
+    if (!validateInputs()) {
       return;
     }
 
     try {
       setIsSubmitting(true);
       const expenseAmount = parseFloat(amount);
+
+      toggleOverlay();
 
       if (editingId) {
         await updateExpense(editingId, {
@@ -295,29 +335,48 @@ const Expense = () => {
           account_id: selectedAccount,
         });
       } else {
-        await addExpense({
-          title,
-          amount: expenseAmount,
-          category,
-          date,
-          account_id: selectedAccount,
-          user_id: user.id,
-        });
-
         const account = accounts.find(acc => acc.id === selectedAccount);
         if (account) {
-          await updateAccount(selectedAccount, {
+          const updatedAccount = {
+            ...account,
+            balance: account.balance - expenseAmount,
+          };
+
+          const accountIndex = accounts.findIndex(
+            acc => acc.id === selectedAccount,
+          );
+          const updatedAccounts = [...accounts];
+          updatedAccounts[accountIndex] = updatedAccount;
+
+          const addPromise = addExpense({
+            title,
+            amount: expenseAmount,
+            category,
+            date,
+            account_id: selectedAccount,
+            user_id: user.id,
+          });
+
+          const updatePromise = updateAccount(selectedAccount, {
             balance: account.balance - expenseAmount,
           });
 
-          await loadAccounts();
+          await Promise.all([addPromise, updatePromise]);
+        } else {
+          await addExpense({
+            title,
+            amount: expenseAmount,
+            category,
+            date,
+            account_id: selectedAccount,
+            user_id: user.id,
+          });
         }
       }
-
-      toggleOverlay();
     } catch (e) {
       console.error('Error saving expense:', e);
       Alert.alert('Error', 'Failed to save expense. Please try again.');
+    } finally {
       setIsSubmitting(false);
     }
   };
@@ -497,16 +556,28 @@ const Expense = () => {
       <Input
         placeholder="Title"
         value={title}
-        onChangeText={setTitle}
+        onChangeText={text => {
+          setTitle(text);
+          if (text.trim()) {
+            setTitleError('');
+          }
+        }}
         inputStyle={dynamicStyles.inputText}
         labelStyle={dynamicStyles.inputLabel}
         label="Title"
+        errorMessage={titleError}
+        errorStyle={{color: 'red', fontSize: 12}}
       />
 
       <Input
         placeholder="Amount"
         value={amount}
-        onChangeText={setAmount}
+        onChangeText={text => {
+          setAmount(text);
+          if (text.trim() && !isNaN(parseFloat(text)) && parseFloat(text) > 0) {
+            setAmountError('');
+          }
+        }}
         keyboardType="numeric"
         inputStyle={dynamicStyles.inputText}
         labelStyle={dynamicStyles.inputLabel}
@@ -518,15 +589,24 @@ const Expense = () => {
               })`
             : 'Amount'
         }
+        errorMessage={amountError}
+        errorStyle={{color: 'red', fontSize: 12}}
       />
 
       <Input
         placeholder="Category"
         value={category}
-        onChangeText={setCategory}
+        onChangeText={text => {
+          setCategory(text);
+          if (text.trim()) {
+            setCategoryError('');
+          }
+        }}
         inputStyle={dynamicStyles.inputText}
         labelStyle={dynamicStyles.inputLabel}
         label="Category"
+        errorMessage={categoryError}
+        errorStyle={{color: 'red', fontSize: 12}}
       />
 
       <Text style={dynamicStyles.sectionLabel}>Select Category</Text>
@@ -542,7 +622,10 @@ const Expense = () => {
               dynamicStyles.categoryButton,
               category === cat && dynamicStyles.activeCategoryButton,
             ]}
-            onPress={() => setCategory(cat)}>
+            onPress={() => {
+              setCategory(cat);
+              setCategoryError('');
+            }}>
             <Text
               style={[
                 dynamicStyles.categoryText,
@@ -595,7 +678,10 @@ const Expense = () => {
                   dynamicStyles.selectedAccountButton,
                 {borderLeftColor: account.color},
               ]}
-              onPress={() => setSelectedAccount(account.id)}>
+              onPress={() => {
+                setSelectedAccount(account.id);
+                setAccountError('');
+              }}>
               <Text
                 style={[
                   dynamicStyles.accountButtonText,
@@ -608,6 +694,18 @@ const Expense = () => {
           ))}
         </ScrollView>
       )}
+
+      {accountError ? (
+        <Text
+          style={{
+            color: 'red',
+            fontSize: 12,
+            marginBottom: 10,
+            marginLeft: 10,
+          }}>
+          {accountError}
+        </Text>
+      ) : null}
 
       <Button
         title={editingId ? 'Update Expense' : 'Add Expense'}

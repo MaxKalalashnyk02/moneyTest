@@ -209,7 +209,6 @@ export const styles = (colors: any) =>
     },
     sectionLabel: {
       color: colors.text,
-      marginLeft: 10,
       marginBottom: 5,
     },
     categoriesScrollView: {
@@ -260,7 +259,7 @@ export const styles = (colors: any) =>
       marginBottom: 10,
     },
     accountsScrollView: {
-      marginBottom: 15,
+      marginVertical: 10,
     },
     accountsScrollViewContent: {
       paddingHorizontal: 5,
@@ -269,7 +268,6 @@ export const styles = (colors: any) =>
       backgroundColor: colors.category,
       padding: 8,
       borderRadius: 20,
-      marginHorizontal: 5,
       borderLeftWidth: 3,
     },
     selectedAccountButton: {

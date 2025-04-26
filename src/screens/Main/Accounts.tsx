@@ -97,6 +97,9 @@ const Accounts = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [deletingAccountIds, setDeletingAccountIds] = useState<string[]>([]);
 
+  const [nameError, setNameError] = useState('');
+  const [balanceError, setBalanceError] = useState('');
+
   useFocusEffect(
     useCallback(() => {
       loadAccounts();
@@ -118,6 +121,31 @@ const Accounts = () => {
     setSelectedColor(COLORS[0]);
     setEditingId(null);
     setIsSubmitting(false);
+    setNameError('');
+    setBalanceError('');
+  };
+
+  const validateInputs = () => {
+    let isValid = true;
+
+    if (!name.trim()) {
+      setNameError('Account name is required');
+      isValid = false;
+    } else {
+      setNameError('');
+    }
+
+    if (!balance.trim()) {
+      setBalanceError('Balance is required');
+      isValid = false;
+    } else if (isNaN(parseFloat(balance)) || parseFloat(balance) < 0) {
+      setBalanceError('Please enter a valid positive number');
+      isValid = false;
+    } else {
+      setBalanceError('');
+    }
+
+    return isValid;
   };
 
   const handleAddAccount = async () => {
@@ -130,8 +158,7 @@ const Accounts = () => {
       return;
     }
 
-    if (!name || !balance) {
-      Alert.alert('Error', 'Name and balance are required');
+    if (!validateInputs()) {
       return;
     }
 
@@ -357,10 +384,17 @@ const Accounts = () => {
       <Input
         placeholder="Account Name"
         value={name}
-        onChangeText={setName}
+        onChangeText={text => {
+          setName(text);
+          if (text.trim()) {
+            setNameError('');
+          }
+        }}
         inputStyle={stylesWithColors.inputText}
         labelStyle={stylesWithColors.inputLabel}
         label="Account Name"
+        errorMessage={nameError}
+        errorStyle={{color: 'red', fontSize: 12}}
       />
 
       <Text style={stylesWithColors.inputLabel}>Currency</Text>
@@ -387,7 +421,16 @@ const Accounts = () => {
       <Input
         placeholder="Initial Balance"
         value={balance}
-        onChangeText={setBalance}
+        onChangeText={text => {
+          setBalance(text);
+          if (
+            text.trim() &&
+            !isNaN(parseFloat(text)) &&
+            parseFloat(text) >= 0
+          ) {
+            setBalanceError('');
+          }
+        }}
         keyboardType="numeric"
         inputStyle={stylesWithColors.inputText}
         labelStyle={stylesWithColors.inputLabel}
@@ -397,6 +440,8 @@ const Accounts = () => {
             {getCurrencySymbol(currency)}
           </Text>
         }
+        errorMessage={balanceError}
+        errorStyle={{color: 'red', fontSize: 12}}
       />
 
       <Text style={stylesWithColors.inputLabel}>Account Color</Text>

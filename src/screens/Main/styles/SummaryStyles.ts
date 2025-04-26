@@ -120,7 +120,10 @@ export const styles = (colors: any) =>
     },
     inputLabel: {
       color: colors.text,
-      marginLeft: 10,
+      marginBottom: 5,
+    },
+    sectionLabel: {
+      color: colors.text,
       marginBottom: 5,
     },
     categoryButtons: {
@@ -139,11 +142,17 @@ export const styles = (colors: any) =>
     selectedCategory: {
       backgroundColor: colors.categorySelected,
     },
+    activeCategoryButton: {
+      backgroundColor: colors.accent,
+    },
     categoryText: {
       color: colors.categoryText,
     },
     selectedCategoryText: {
       color: colors.categorySelectedText,
+    },
+    activeCategoryText: {
+      color: '#000000',
     },
     datePickerContainer: {
       marginBottom: 20,
@@ -168,11 +177,35 @@ export const styles = (colors: any) =>
     buttonTitle: {
       color: '#000000',
     },
+    addButtonText: {
+      color: '#000000',
+    },
     scrollContainer: {
       marginBottom: 15,
     },
     scrollContent: {
       paddingHorizontal: 5,
+    },
+    accountsScrollView: {
+      marginVertical: 10,
+    },
+    accountsScrollViewContent: {
+      paddingHorizontal: 5,
+    },
+    accountButton: {
+      backgroundColor: colors.category,
+      padding: 8,
+      borderRadius: 20,
+      borderLeftWidth: 3,
+    },
+    selectedAccountButton: {
+      backgroundColor: colors.accent,
+    },
+    accountButtonText: {
+      color: colors.categoryText,
+    },
+    selectedAccountButtonText: {
+      color: '#000000',
     },
     fab: {
       marginBottom: 20,

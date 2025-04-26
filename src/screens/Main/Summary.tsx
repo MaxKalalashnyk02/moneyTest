@@ -79,12 +79,28 @@ const Summary = () => {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const [titleError, setTitleError] = useState('');
+  const [amountError, setAmountError] = useState('');
+  const [accountError, setAccountError] = useState('');
+  const [categoryError, setCategoryError] = useState('');
+
   useFocusEffect(
     useCallback(() => {
       loadExpenses();
       loadAccounts();
     }, [loadExpenses, loadAccounts]),
   );
+
+  useEffect(() => {
+    if (accounts.length > 0 && !selectedAccount) {
+      const mainAccount = accounts.find(acc => acc.name === 'Main Account');
+      if (mainAccount) {
+        setSelectedAccount(mainAccount.id);
+      } else if (accounts.length > 0) {
+        setSelectedAccount(accounts[0].id);
+      }
+    }
+  }, [accounts, selectedAccount]);
 
   const filterExpensesByPeriod = useCallback(
     (expenseList: Expense[], period: string): Expense[] => {
@@ -174,6 +190,15 @@ const Summary = () => {
   const toggleOverlay = () => {
     if (visible) {
       resetForm();
+    } else {
+      if (accounts.length > 0 && !selectedAccount) {
+        const mainAccount = accounts.find(acc => acc.name === 'Main Account');
+        if (mainAccount) {
+          setSelectedAccount(mainAccount.id);
+        } else {
+          setSelectedAccount(accounts[0].id);
+        }
+      }
     }
     setVisible(!visible);
   };
@@ -183,8 +208,12 @@ const Summary = () => {
     setAmount('');
     setCategory('');
     setDate(new Date());
-    setSelectedAccount('');
+
     setIsSubmitting(false);
+    setTitleError('');
+    setAmountError('');
+    setAccountError('');
+    setCategoryError('');
   };
 
   const toggleDatePicker = () => {
@@ -223,6 +252,43 @@ const Summary = () => {
       legendFontSize: 12,
     })) || [];
 
+  const validateInputs = () => {
+    let isValid = true;
+
+    if (!title.trim()) {
+      setTitleError('Title is required');
+      isValid = false;
+    } else {
+      setTitleError('');
+    }
+
+    if (!amount.trim()) {
+      setAmountError('Amount is required');
+      isValid = false;
+    } else if (isNaN(parseFloat(amount)) || parseFloat(amount) <= 0) {
+      setAmountError('Please enter a valid positive number');
+      isValid = false;
+    } else {
+      setAmountError('');
+    }
+
+    if (!category.trim()) {
+      setCategoryError('Category is required');
+      isValid = false;
+    } else {
+      setCategoryError('');
+    }
+
+    if (!selectedAccount) {
+      setAccountError('Please select an account');
+      isValid = false;
+    } else {
+      setAccountError('');
+    }
+
+    return isValid;
+  };
+
   const handleAddExpense = async () => {
     if (isSubmitting) {
       return;
@@ -231,12 +297,8 @@ const Summary = () => {
       Alert.alert('Error', 'Please log in to add expenses');
       return;
     }
-    if (!title || !amount) {
-      Alert.alert('Error', 'Title and amount are required');
-      return;
-    }
-    if (!selectedAccount) {
-      Alert.alert('Error', 'Please select an account');
+
+    if (!validateInputs()) {
       return;
     }
 
@@ -395,21 +457,35 @@ const Summary = () => {
       isVisible={visible}
       onBackdropPress={toggleOverlay}
       overlayStyle={stylesWithColors.overlay}>
-      <Text style={stylesWithColors.overlayTitle}>Add New Expense</Text>
+      <Text h4 style={stylesWithColors.overlayTitle}>
+        Add New Expense
+      </Text>
 
       <Input
         placeholder="Title"
         value={title}
-        onChangeText={setTitle}
+        onChangeText={text => {
+          setTitle(text);
+          if (text.trim()) {
+            setTitleError('');
+          }
+        }}
         inputStyle={stylesWithColors.inputText}
         labelStyle={stylesWithColors.inputLabel}
         label="Title"
+        errorMessage={titleError}
+        errorStyle={{color: 'red', fontSize: 12}}
       />
 
       <Input
         placeholder="Amount"
         value={amount}
-        onChangeText={setAmount}
+        onChangeText={text => {
+          setAmount(text);
+          if (text.trim() && !isNaN(parseFloat(text)) && parseFloat(text) > 0) {
+            setAmountError('');
+          }
+        }}
         keyboardType="numeric"
         inputStyle={stylesWithColors.inputText}
         labelStyle={stylesWithColors.inputLabel}
@@ -421,9 +497,27 @@ const Summary = () => {
               })`
             : 'Amount'
         }
+        errorMessage={amountError}
+        errorStyle={{color: 'red', fontSize: 12}}
       />
 
-      <Text style={stylesWithColors.inputLabel}>Category</Text>
+      <Input
+        placeholder="Category"
+        value={category}
+        onChangeText={text => {
+          setCategory(text);
+          if (text.trim()) {
+            setCategoryError('');
+          }
+        }}
+        inputStyle={stylesWithColors.inputText}
+        labelStyle={stylesWithColors.inputLabel}
+        label="Category"
+        errorMessage={categoryError}
+        errorStyle={{color: 'red', fontSize: 12}}
+      />
+
+      <Text style={stylesWithColors.sectionLabel}>Select Category</Text>
       <ScrollView
         horizontal={true}
         showsHorizontalScrollIndicator={false}
@@ -434,13 +528,16 @@ const Summary = () => {
             key={cat}
             style={[
               stylesWithColors.categoryButton,
-              category === cat && stylesWithColors.selectedCategory,
+              category === cat && stylesWithColors.activeCategoryButton,
             ]}
-            onPress={() => setCategory(cat)}>
+            onPress={() => {
+              setCategory(cat);
+              setCategoryError('');
+            }}>
             <Text
               style={[
                 stylesWithColors.categoryText,
-                category === cat && stylesWithColors.selectedCategoryText,
+                category === cat && stylesWithColors.activeCategoryText,
               ]}>
               {cat}
             </Text>
@@ -480,24 +577,26 @@ const Summary = () => {
         <ScrollView
           horizontal={true}
           showsHorizontalScrollIndicator={false}
-          style={stylesWithColors.scrollContainer}
-          contentContainerStyle={stylesWithColors.scrollContent}>
+          style={stylesWithColors.accountsScrollView}
+          contentContainerStyle={stylesWithColors.accountsScrollViewContent}>
           {accounts.map(account => (
             <TouchableOpacity
               key={account.id}
               style={[
-                stylesWithColors.categoryButton,
+                stylesWithColors.accountButton,
                 selectedAccount === account.id &&
-                  stylesWithColors.selectedCategory,
-                stylesWithColors.accountItem,
+                  stylesWithColors.selectedAccountButton,
                 {borderLeftColor: account.color},
               ]}
-              onPress={() => setSelectedAccount(account.id)}>
+              onPress={() => {
+                setSelectedAccount(account.id);
+                setAccountError('');
+              }}>
               <Text
                 style={[
-                  stylesWithColors.categoryText,
+                  stylesWithColors.accountButtonText,
                   selectedAccount === account.id &&
-                    stylesWithColors.selectedCategoryText,
+                    stylesWithColors.selectedAccountButtonText,
                 ]}>
                 {account.name}
               </Text>
@@ -506,10 +605,22 @@ const Summary = () => {
         </ScrollView>
       )}
 
+      {accountError ? (
+        <Text
+          style={{
+            color: 'red',
+            fontSize: 12,
+            marginBottom: 10,
+            marginLeft: 10,
+          }}>
+          {accountError}
+        </Text>
+      ) : null}
+
       <Button
         title="Add Expense"
         buttonStyle={stylesWithColors.addButton}
-        titleStyle={stylesWithColors.buttonTitle}
+        titleStyle={stylesWithColors.addButtonText}
         onPress={handleAddExpense}
         disabled={isSubmitting}
       />

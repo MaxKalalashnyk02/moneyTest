@@ -11,26 +11,19 @@ export type Account = {
 
 const inspectError = (error: any): string => {
   if (!error) {
-    return 'Unknown error (null error object)';
+    return 'Unknown error';
   }
 
   try {
     if (typeof error === 'string') {
       return error;
     }
-
-    const details = {
-      message: error.message || 'No message',
-      code: error.code || 'No code',
-      details: error.details || 'No details',
-      hint: error.hint || 'No hint',
-      toString: String(error),
-      keys: Object.keys(error).join(', '),
-    };
-
-    return JSON.stringify(details, null, 2);
+    if (error.message) {
+      return error.message;
+    }
+    return JSON.stringify(error, null, 2);
   } catch (e) {
-    return `Error while inspecting error: ${e}`;
+    return 'Error while formatting error';
   }
 };
 
@@ -80,7 +73,10 @@ const accountService = {
           .eq('user_id', account.user_id);
 
         if (existingAccounts && existingAccounts.length > 0) {
-          throw new Error('Main Account already exists');
+          console.log(
+            'Main Account already exists, returning existing account',
+          );
+          return existingAccounts[0] as Account;
         }
       }
 
@@ -91,6 +87,24 @@ const accountService = {
         .single();
 
       if (error) {
+        if (
+          error.message &&
+          error.message.includes('duplicate key value') &&
+          account.name === 'Main Account'
+        ) {
+          const {data: existingAccount} = await supabase
+            .from('Account')
+            .select('*')
+            .eq('name', 'Main Account')
+            .eq('user_id', account.user_id)
+            .single();
+
+          if (existingAccount) {
+            console.log('Recovered existing Main Account after conflict');
+            return existingAccount as Account;
+          }
+        }
+
         console.error('Supabase error adding account:', inspectError(error));
         throw error;
       }

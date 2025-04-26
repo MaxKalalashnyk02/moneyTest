@@ -60,6 +60,7 @@ const styles = StyleSheet.create({
   },
   buttonContainer: {
     gap: 10,
+    marginBottom: 30,
   },
   button: {
     backgroundColor: 'black',

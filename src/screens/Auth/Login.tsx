@@ -1,6 +1,6 @@
 import React, {useState, useEffect} from 'react';
-import {View, StyleSheet, SafeAreaView, ScrollView, Alert} from 'react-native';
-import {Text, Button, Input} from '@rneui/themed';
+import {View, StyleSheet, SafeAreaView, ScrollView} from 'react-native';
+import {Text, Button, Input, Icon} from '@rneui/themed';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {AuthStackParamList} from '../../navigation/stacks/AuthStack';
 import {useAuth} from '../../contexts/AuthContext';
@@ -13,18 +13,46 @@ const Login = ({navigation}: LoginProps) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+
+  const [emailError, setEmailError] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+  const [generalError, setGeneralError] = useState('');
+
   const {login, error, resetError} = useAuth();
 
   useEffect(() => {
     if (error) {
-      Alert.alert('Login Error', error);
+      setGeneralError(error);
       resetError();
     }
   }, [error, resetError]);
 
+  const validateForm = () => {
+    let isValid = true;
+
+    setEmailError('');
+    setPasswordError('');
+    setGeneralError('');
+
+    if (!email.trim()) {
+      setEmailError('Email is required');
+      isValid = false;
+    } else if (!/\S+@\S+\.\S+/.test(email)) {
+      setEmailError('Please enter a valid email address');
+      isValid = false;
+    }
+
+    if (!password) {
+      setPasswordError('Password is required');
+      isValid = false;
+    }
+
+    return isValid;
+  };
+
   const handleLogin = async () => {
-    if (!email || !password) {
-      Alert.alert('Error', 'Email and password are required');
+    if (!validateForm()) {
       return;
     }
 
@@ -33,9 +61,14 @@ const Login = ({navigation}: LoginProps) => {
       await login(email, password);
     } catch (e) {
       console.log('Login error:', e);
+      setGeneralError('An error occurred during login. Please try again.');
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const togglePasswordVisibility = () => {
+    setShowPassword(!showPassword);
   };
 
   return (
@@ -47,28 +80,59 @@ const Login = ({navigation}: LoginProps) => {
           </Text>
           <Text style={styles.subtitle}>Welcome back!</Text>
         </View>
+
+        {generalError ? (
+          <Text style={styles.errorText}>{generalError}</Text>
+        ) : null}
+
         <Input
           placeholder="Email"
           value={email}
-          onChangeText={setEmail}
+          onChangeText={text => {
+            setEmail(text);
+            if (text.trim()) {
+              setEmailError('');
+            }
+          }}
           autoCapitalize="none"
           keyboardType="email-address"
           inputStyle={styles.inputText}
           placeholderTextColor="black"
+          errorStyle={styles.errorText}
+          errorMessage={emailError}
         />
         <Input
           placeholder="Password"
           value={password}
-          onChangeText={setPassword}
-          secureTextEntry
+          onChangeText={text => {
+            setPassword(text);
+            if (text) {
+              setPasswordError('');
+            }
+          }}
+          secureTextEntry={!showPassword}
           inputStyle={styles.inputText}
           placeholderTextColor="black"
+          textContentType="oneTimeCode"
+          autoComplete="off"
+          errorStyle={styles.errorText}
+          errorMessage={passwordError}
+          rightIcon={
+            <Icon
+              name={showPassword ? 'eye' : 'eye-off'}
+              type="feather"
+              size={18}
+              color="black"
+              onPress={togglePasswordVisibility}
+            />
+          }
         />
         <Button
-          title={isLoading ? 'Loading...' : 'Login'}
+          title="Login"
           buttonStyle={styles.button}
           onPress={handleLogin}
-          loading={isLoading}
+          disabledStyle={styles.buttonDisabled}
+          disabledTitleStyle={styles.buttonDisabledTitle}
           disabled={isLoading}
         />
         <View style={styles.footerContainer}>
@@ -104,24 +168,27 @@ const styles = StyleSheet.create({
     color: 'black',
   },
   titleContainer: {
-    alignSelf: 'flex-start',
-    gap: 10,
+    gap: 5,
+    marginBottom: 10,
   },
   button: {
     backgroundColor: 'black',
     borderRadius: 30,
     paddingHorizontal: 20,
-    marginTop: 20,
+  },
+  buttonDisabled: {
+    backgroundColor: '#fff787',
+  },
+  buttonDisabledTitle: {
+    color: 'black',
   },
   subtitle: {
     color: 'black',
-    paddingBottom: 10,
   },
   footerContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 20,
   },
   footerText: {
     color: 'black',
@@ -129,6 +196,10 @@ const styles = StyleSheet.create({
   signupButtonTitle: {
     color: 'black',
     fontWeight: 'bold',
+  },
+  errorText: {
+    color: 'red',
+    fontSize: 12,
   },
 });
 

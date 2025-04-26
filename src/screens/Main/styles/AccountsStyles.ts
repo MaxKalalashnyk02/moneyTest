@@ -76,7 +76,6 @@ export const styles = (colors: any) =>
     },
     inputLabel: {
       color: colors.text,
-      marginLeft: 10,
       marginBottom: 5,
     },
     inputText: {

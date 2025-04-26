@@ -112,9 +112,6 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({
         data?.user &&
         !data.user.identities?.[0]?.identity_data?.email_confirmed_at
       ) {
-        setError(
-          'Please check your email to confirm your account before logging in',
-        );
       } else if (data?.user) {
         const {error: signInError} = await supabase.auth.signInWithPassword({
           email,
