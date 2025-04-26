@@ -59,7 +59,8 @@ type CategorySummary = {
 };
 
 const Summary = () => {
-  const {expenses, isLoading, loadExpenses, addExpense} = useExpenses();
+  const {expenses, isLoading, loadExpenses, addExpense, updateExpense} =
+    useExpenses();
   const {accounts, loadAccounts, updateAccount} = useAccounts();
   const {toggleTheme, isDark} = useTheme();
   const {user} = useAuth();
@@ -78,6 +79,7 @@ const Summary = () => {
   const [selectedAccount, setSelectedAccount] = useState<string>('');
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   const [titleError, setTitleError] = useState('');
   const [amountError, setAmountError] = useState('');
@@ -187,6 +189,147 @@ const Summary = () => {
     });
   };
 
+  const handleAddExpense = async () => {
+    if (isSubmitting) {
+      return;
+    }
+    if (!user) {
+      Alert.alert('Error', 'Please log in to add expenses');
+      return;
+    }
+
+    if (!validateInputs()) {
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      const expenseAmount = parseFloat(amount);
+
+      if (editingId) {
+        const originalExpense = expenses.find(exp => exp.id === editingId);
+
+        if (originalExpense) {
+          const originalAmount = originalExpense.amount;
+          const amountDifference = originalAmount - expenseAmount;
+
+          await updateExpense(editingId, {
+            title,
+            amount: expenseAmount,
+            category,
+            date,
+            account_id: selectedAccount,
+          });
+
+          if (
+            amountDifference !== 0 ||
+            originalExpense.account_id !== selectedAccount
+          ) {
+            if (originalExpense.account_id !== selectedAccount) {
+              const originalAccount = accounts.find(
+                acc => acc.id === originalExpense.account_id,
+              );
+              if (originalAccount) {
+                await updateAccount(originalExpense.account_id, {
+                  balance: originalAccount.balance + originalAmount,
+                });
+              }
+
+              const newAccount = accounts.find(
+                acc => acc.id === selectedAccount,
+              );
+              if (newAccount) {
+                await updateAccount(selectedAccount, {
+                  balance: newAccount.balance - expenseAmount,
+                });
+              }
+            } else {
+              const account = accounts.find(acc => acc.id === selectedAccount);
+              if (account) {
+                await updateAccount(selectedAccount, {
+                  balance: account.balance + amountDifference,
+                });
+              }
+            }
+          }
+
+          setEditingId(null);
+        }
+      } else {
+        const newExpense = {
+          title,
+          amount: expenseAmount,
+          category,
+          date,
+          account_id: selectedAccount,
+          user_id: user.id,
+        };
+
+        if (summary) {
+          const updatedSummary = {...summary};
+          const cat = category || 'Other';
+
+          let catSummary = updatedSummary.categories.find(c => c.name === cat);
+          if (!catSummary) {
+            catSummary = {
+              name: cat,
+              amount: 0,
+              color:
+                CATEGORY_COLORS[cat as keyof typeof CATEGORY_COLORS] ||
+                CATEGORY_COLORS.Other,
+              percentage: 0,
+            };
+            updatedSummary.categories.push(catSummary);
+          }
+
+          catSummary.amount += expenseAmount;
+          updatedSummary.totalAmount += expenseAmount;
+
+          updatedSummary.categories.forEach(c => {
+            c.percentage = Math.round(
+              (c.amount / updatedSummary.totalAmount) * 100,
+            );
+          });
+
+          setSummary(updatedSummary);
+        }
+
+        await addExpense(newExpense);
+
+        const account = accounts.find(acc => acc.id === selectedAccount);
+        if (account) {
+          await updateAccount(selectedAccount, {
+            balance: account.balance - expenseAmount,
+          });
+        }
+      }
+
+      toggleOverlay();
+      await loadExpenses();
+      await loadAccounts();
+    } catch (e) {
+      console.error('Error saving expense:', e);
+      Alert.alert('Error', 'Failed to save expense. Please try again.');
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleEditExpense = (expense: Expense) => {
+    setTitle(expense.title);
+    setAmount(expense.amount.toString());
+    setCategory(expense.category);
+    setDate(new Date(expense.date));
+    setSelectedAccount(expense.account_id);
+    setEditingId(expense.id);
+
+    setTitleError('');
+    setAmountError('');
+    setAccountError('');
+    setCategoryError('');
+
+    setVisible(true);
+  };
+
   const toggleOverlay = () => {
     if (visible) {
       resetForm();
@@ -208,7 +351,7 @@ const Summary = () => {
     setAmount('');
     setCategory('');
     setDate(new Date());
-
+    setEditingId(null);
     setIsSubmitting(false);
     setTitleError('');
     setAmountError('');
@@ -289,81 +432,6 @@ const Summary = () => {
     return isValid;
   };
 
-  const handleAddExpense = async () => {
-    if (isSubmitting) {
-      return;
-    }
-    if (!user) {
-      Alert.alert('Error', 'Please log in to add expenses');
-      return;
-    }
-
-    if (!validateInputs()) {
-      return;
-    }
-
-    try {
-      setIsSubmitting(true);
-      const expenseAmount = parseFloat(amount);
-
-      const newExpense = {
-        title,
-        amount: expenseAmount,
-        category,
-        date,
-        account_id: selectedAccount,
-        user_id: user.id,
-      };
-
-      if (summary) {
-        const updatedSummary = {...summary};
-        const cat = category || 'Other';
-
-        let catSummary = updatedSummary.categories.find(c => c.name === cat);
-        if (!catSummary) {
-          catSummary = {
-            name: cat,
-            amount: 0,
-            color:
-              CATEGORY_COLORS[cat as keyof typeof CATEGORY_COLORS] ||
-              CATEGORY_COLORS.Other,
-            percentage: 0,
-          };
-          updatedSummary.categories.push(catSummary);
-        }
-
-        catSummary.amount += expenseAmount;
-        updatedSummary.totalAmount += expenseAmount;
-
-        updatedSummary.categories.forEach(c => {
-          c.percentage = Math.round(
-            (c.amount / updatedSummary.totalAmount) * 100,
-          );
-        });
-
-        setSummary(updatedSummary);
-      }
-
-      toggleOverlay();
-
-      await addExpense(newExpense);
-
-      const account = accounts.find(acc => acc.id === selectedAccount);
-      if (account) {
-        await updateAccount(selectedAccount, {
-          balance: account.balance - expenseAmount,
-        });
-        await loadAccounts();
-      }
-
-      await loadExpenses();
-    } catch (e) {
-      console.error('Error saving expense:', e);
-      Alert.alert('Error', 'Failed to save expense. Please try again.');
-      setIsSubmitting(false);
-    }
-  };
-
   const renderPeriodSelector = () => (
     <View style={stylesWithColors.periodsContainer}>
       {PERIODS.map(period => (
@@ -435,6 +503,27 @@ const Summary = () => {
           </View>
         ))}
       </View>
+
+      <Divider style={stylesWithColors.divider} />
+      <Text style={stylesWithColors.recentExpensesTitle}>Recent Expenses</Text>
+      {filterExpensesByPeriod(expenses, selectedPeriod)
+        .slice(0, 5)
+        .map(expense => (
+          <TouchableOpacity
+            key={expense.id}
+            style={stylesWithColors.expenseItem}
+            onPress={() => handleEditExpense(expense)}>
+            <View style={stylesWithColors.expenseItemLeft}>
+              <Text style={stylesWithColors.expenseTitle}>{expense.title}</Text>
+              <Text style={stylesWithColors.expenseCategory}>
+                {expense.category}
+              </Text>
+            </View>
+            <Text style={stylesWithColors.expenseAmount}>
+              ${expense.amount.toFixed(2)}
+            </Text>
+          </TouchableOpacity>
+        ))}
     </Card>
   );
 
@@ -458,7 +547,7 @@ const Summary = () => {
       onBackdropPress={toggleOverlay}
       overlayStyle={stylesWithColors.overlay}>
       <Text h4 style={stylesWithColors.overlayTitle}>
-        Add New Expense
+        {editingId ? 'Edit Expense' : 'Add New Expense'}
       </Text>
 
       <Input
@@ -610,7 +699,7 @@ const Summary = () => {
       ) : null}
 
       <Button
-        title="Add Expense"
+        title={editingId ? 'Update Expense' : 'Add Expense'}
         buttonStyle={stylesWithColors.addButton}
         titleStyle={stylesWithColors.addButtonText}
         onPress={handleAddExpense}

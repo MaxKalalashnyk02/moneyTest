@@ -262,7 +262,7 @@ export const styles = (colors: any) =>
       marginVertical: 10,
     },
     accountsScrollViewContent: {
-      paddingHorizontal: 5,
+      gap: 5,
     },
     accountButton: {
       backgroundColor: colors.category,

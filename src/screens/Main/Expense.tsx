@@ -327,13 +327,55 @@ const Expense = () => {
       toggleOverlay();
 
       if (editingId) {
-        await updateExpense(editingId, {
-          title,
-          amount: expenseAmount,
-          category,
-          date,
-          account_id: selectedAccount,
-        });
+        const originalExpense = expenses.find(exp => exp.id === editingId);
+
+        if (originalExpense) {
+          const originalAmount = originalExpense.amount;
+          const amountDifference = originalAmount - expenseAmount;
+
+          await updateExpense(editingId, {
+            title,
+            amount: expenseAmount,
+            category,
+            date,
+            account_id: selectedAccount,
+          });
+
+          if (
+            amountDifference !== 0 ||
+            originalExpense.account_id !== selectedAccount
+          ) {
+            if (originalExpense.account_id !== selectedAccount) {
+              const originalAccount = accounts.find(
+                acc => acc.id === originalExpense.account_id,
+              );
+              if (originalAccount) {
+                await updateAccount(originalExpense.account_id, {
+                  balance: originalAccount.balance + originalAmount,
+                });
+              }
+
+              const newAccount = accounts.find(
+                acc => acc.id === selectedAccount,
+              );
+              if (newAccount) {
+                await updateAccount(selectedAccount, {
+                  balance: newAccount.balance - expenseAmount,
+                });
+              }
+            } else {
+              const account = accounts.find(acc => acc.id === selectedAccount);
+              if (account) {
+                await updateAccount(selectedAccount, {
+                  balance: account.balance + amountDifference,
+                });
+              }
+            }
+          }
+        }
+
+        await loadExpenses();
+        await loadAccounts();
       } else {
         const account = accounts.find(acc => acc.id === selectedAccount);
         if (account) {

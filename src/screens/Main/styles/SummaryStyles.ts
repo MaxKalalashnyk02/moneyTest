@@ -190,7 +190,7 @@ export const styles = (colors: any) =>
       marginVertical: 10,
     },
     accountsScrollViewContent: {
-      paddingHorizontal: 5,
+      gap: 5,
     },
     accountButton: {
       backgroundColor: colors.category,
@@ -228,5 +228,37 @@ export const styles = (colors: any) =>
     errorText: {
       color: 'red',
       fontSize: 10,
+    },
+    recentExpensesTitle: {
+      fontSize: 16,
+      fontWeight: 'bold',
+      color: colors.text,
+      marginVertical: 10,
+    },
+    expenseItem: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingVertical: 10,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.divider,
+    },
+    expenseItemLeft: {
+      flex: 1,
+    },
+    expenseTitle: {
+      fontSize: 14,
+      fontWeight: 'bold',
+      color: colors.text,
+    },
+    expenseCategory: {
+      fontSize: 12,
+      color: colors.textSecondary,
+      marginTop: 3,
+    },
+    expenseAmount: {
+      fontSize: 16,
+      fontWeight: 'bold',
+      color: colors.text,
     },
   });
