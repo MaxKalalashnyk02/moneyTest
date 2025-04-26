@@ -566,7 +566,7 @@ const Expense = () => {
         labelStyle={dynamicStyles.inputLabel}
         label="Title"
         errorMessage={titleError}
-        errorStyle={{color: 'red', fontSize: 12}}
+        errorStyle={dynamicStyles.errorText}
       />
 
       <Input
@@ -590,7 +590,7 @@ const Expense = () => {
             : 'Amount'
         }
         errorMessage={amountError}
-        errorStyle={{color: 'red', fontSize: 12}}
+        errorStyle={dynamicStyles.errorText}
       />
 
       <Input
@@ -606,7 +606,7 @@ const Expense = () => {
         labelStyle={dynamicStyles.inputLabel}
         label="Category"
         errorMessage={categoryError}
-        errorStyle={{color: 'red', fontSize: 12}}
+        errorStyle={dynamicStyles.errorText}
       />
 
       <Text style={dynamicStyles.sectionLabel}>Select Category</Text>
@@ -696,15 +696,7 @@ const Expense = () => {
       )}
 
       {accountError ? (
-        <Text
-          style={{
-            color: 'red',
-            fontSize: 12,
-            marginBottom: 10,
-            marginLeft: 10,
-          }}>
-          {accountError}
-        </Text>
+        <Text style={dynamicStyles.errorText}>{accountError}</Text>
       ) : null}
 
       <Button

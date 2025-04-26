@@ -225,4 +225,8 @@ export const styles = (colors: any) =>
     accountItem: {
       borderLeftWidth: 3,
     },
+    errorText: {
+      color: 'red',
+      fontSize: 10,
+    },
   });

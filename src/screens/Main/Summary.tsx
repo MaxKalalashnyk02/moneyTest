@@ -474,7 +474,7 @@ const Summary = () => {
         labelStyle={stylesWithColors.inputLabel}
         label="Title"
         errorMessage={titleError}
-        errorStyle={{color: 'red', fontSize: 12}}
+        errorStyle={stylesWithColors.errorText}
       />
 
       <Input
@@ -498,7 +498,7 @@ const Summary = () => {
             : 'Amount'
         }
         errorMessage={amountError}
-        errorStyle={{color: 'red', fontSize: 12}}
+        errorStyle={stylesWithColors.errorText}
       />
 
       <Input
@@ -514,7 +514,7 @@ const Summary = () => {
         labelStyle={stylesWithColors.inputLabel}
         label="Category"
         errorMessage={categoryError}
-        errorStyle={{color: 'red', fontSize: 12}}
+        errorStyle={stylesWithColors.errorText}
       />
 
       <Text style={stylesWithColors.sectionLabel}>Select Category</Text>
@@ -606,15 +606,7 @@ const Summary = () => {
       )}
 
       {accountError ? (
-        <Text
-          style={{
-            color: 'red',
-            fontSize: 12,
-            marginBottom: 10,
-            marginLeft: 10,
-          }}>
-          {accountError}
-        </Text>
+        <Text style={stylesWithColors.errorText}>{accountError}</Text>
       ) : null}
 
       <Button

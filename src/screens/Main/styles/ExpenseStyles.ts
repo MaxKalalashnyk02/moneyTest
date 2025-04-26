@@ -287,4 +287,8 @@ export const styles = (colors: any) =>
     addButtonText: {
       color: '#000000',
     },
+    errorText: {
+      color: 'red',
+      fontSize: 10,
+    },
   });
