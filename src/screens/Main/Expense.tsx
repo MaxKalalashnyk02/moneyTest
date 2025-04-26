@@ -187,6 +187,7 @@ const Expense = () => {
       setAmountError('');
       setAccountError('');
       setCategoryError('');
+      setShowDatePicker(false);
     } else {
       manuallyOpened.current = true;
 
@@ -828,7 +829,17 @@ const Expense = () => {
 
       <FAB
         placement="right"
-        icon={{name: 'add', color: '#000000'}}
+        title={Platform.OS === 'android' ? '+' : ''}
+        titleStyle={
+          Platform.OS === 'android'
+            ? {fontSize: 20, color: '#000000'}
+            : undefined
+        }
+        icon={
+          Platform.OS === 'ios'
+            ? {name: 'plus', type: 'material-community', color: '#000000'}
+            : undefined
+        }
         color={colors.accent}
         style={dynamicStyles.fab}
         onPress={toggleOverlay}

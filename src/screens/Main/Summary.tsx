@@ -357,6 +357,7 @@ const Summary = () => {
     setAmountError('');
     setAccountError('');
     setCategoryError('');
+    setShowDatePicker(false);
   };
 
   const toggleDatePicker = () => {
@@ -738,7 +739,17 @@ const Summary = () => {
 
       <FAB
         placement="right"
-        icon={{name: 'add', color: '#000000'}}
+        title={Platform.OS === 'android' ? '+' : ''}
+        titleStyle={
+          Platform.OS === 'android'
+            ? {fontSize: 20, color: '#000000'}
+            : undefined
+        }
+        icon={
+          Platform.OS === 'ios'
+            ? {name: 'plus', type: 'material-community', color: '#000000'}
+            : undefined
+        }
         color={colors.accent}
         style={stylesWithColors.fab}
         onPress={toggleOverlay}

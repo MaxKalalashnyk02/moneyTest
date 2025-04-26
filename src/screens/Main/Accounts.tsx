@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   Alert,
   Switch,
+  Platform,
 } from 'react-native';
 import {
   Text,
@@ -496,7 +497,17 @@ const Accounts = () => {
 
       <FAB
         placement="right"
-        icon={{name: 'add', color: '#000000'}}
+        title={Platform.OS === 'android' ? '+' : ''}
+        titleStyle={
+          Platform.OS === 'android'
+            ? {fontSize: 20, color: '#000000'}
+            : undefined
+        }
+        icon={
+          Platform.OS === 'ios'
+            ? {name: 'plus', type: 'material-community', color: '#000000'}
+            : undefined
+        }
         color={colors.accent}
         style={stylesWithColors.fab}
         onPress={toggleOverlay}
