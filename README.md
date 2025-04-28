@@ -59,18 +59,51 @@ SUPABASE_ANON_KEY=your-anon-key
 
 ### Running the app
 
+#### Using npm
+
+Start Metro Bundler:
+```bash
+npm start
+```
+
 For iOS:
 ```bash
+npm run ios
+# or
 npx pod-install ios
 npx react-native run-ios
 ```
 
 For Android:
 ```bash
+npm run android
+# or
 npx react-native run-android
 ```
 
-Or if build is failed we can try on Xcode or Android Studio build it and run
+#### Using yarn
+
+Start Metro Bundler:
+```bash
+yarn start
+```
+
+For iOS:
+```bash
+yarn ios
+# or
+npx pod-install ios
+npx react-native run-ios
+```
+
+For Android:
+```bash
+yarn android
+# or
+npx react-native run-android
+```
+
+If build fails, you can try building and running directly with Xcode or Android Studio.
 
 ## Project Structure
 
